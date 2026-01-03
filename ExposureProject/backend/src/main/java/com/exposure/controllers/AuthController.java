@@ -8,6 +8,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 
+// TODO: проверить сохранение пользователя
+// TODO: исправить ошибки на фронте связанные с коннектиоом
+
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor

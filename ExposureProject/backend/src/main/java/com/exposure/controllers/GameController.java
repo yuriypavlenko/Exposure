@@ -17,6 +17,8 @@ public class GameController {
     @PostMapping("/start")
     public String getPage() {
         // Инициализация сессии
+        // TODO: создать в бд ботов и мокать просто через айди
+        // TODO: Кидать пользователя через токен на веб
 
         GameSession gameSession = new GameSession();
 
