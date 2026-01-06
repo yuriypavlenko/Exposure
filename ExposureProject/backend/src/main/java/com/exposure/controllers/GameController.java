@@ -1,34 +1,60 @@
 package com.exposure.controllers;
 
+import com.exposure.DTOs.Auth.AuthRequest;
+import com.exposure.DTOs.game.BotDTO;
+import com.exposure.DTOs.game.GameRequest;
+import com.exposure.DTOs.game.GameResponse;
 import com.exposure.interfaces.BotResponseInterface;
+import com.exposure.models.Bot;
 import com.exposure.models.GameSession;
+import com.exposure.models.User;
+import com.exposure.repositories.BotRepository;
+import com.exposure.repositories.GameSessionRepository;
+import com.exposure.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Optional;
 
 @RequiredArgsConstructor
-@RestController("/api/game")
+@RestController
+@RequestMapping("/api/game")
 public class GameController {
-    BotResponseInterface botResponseInterface;
+    private final BotRepository botRepository;
+    private final UserRepository userRepository;
+    private final GameSessionRepository gameSessionRepository;
 
-    // TODO: Отправлять тут стартовые данные про игровую сессию по запросу
+    private final BotResponseInterface botResponseInterface;
+
+
     @PostMapping("/start")
-    public String getPage() {
-        // Инициализация сессии
-        // TODO: создать в бд ботов и мокать просто через айди
-        // TODO: Кидать пользователя через токен на веб
+    public ResponseEntity<?> getPage(@RequestBody GameRequest request) {
+        Optional<User> user = userRepository.findById(Long.parseLong(request.userId));
+        List<Long> selectedBotId = request.selectedBotId;
 
-        // то есть, сначала ты берешь токен с фронта и проверяешь есть ли такой вообще юзер.
-        // дальше получаешь ботов который он выбрал (у нас они замоканные, поэтому с главной страницы кидаешь айди 2 ботов)
-        // потом создаешь игровую сессию.
-        // после этого, тебе нужно создать DTO для фронта и кинуть ему.
+        if (user.isPresent() && !selectedBotId.isEmpty()) {
 
-        GameSession gameSession = new GameSession();
+            Optional<Bot> bot1 = botRepository.findBotById(selectedBotId.get(0));
+            Optional<Bot> bot2 = botRepository.findBotById(selectedBotId.get(1));
 
-        // Отправка DTO фронту
-        return null;
+            if (bot1.isPresent() && bot2.isPresent()) {
+                List<Bot> bots = List.of(bot1.get(), bot2.get());
+
+                GameSession gameSession = new GameSession(user.get(), bots);
+                gameSessionRepository.save(gameSession);
+
+                GameResponse gameResponse = new GameResponse(
+                        gameSession.getId(),
+                        List.of(new BotDTO(bot1.get().getId(), bot1.get().getName()),
+                                new BotDTO(bot2.get().getId(), bot2.get().getName()))
+                        );
+
+                return ResponseEntity.ok(gameResponse);
+            }
+        }
+        return ResponseEntity.badRequest().build();
     }
 
     // TODO: На вопрос он спрашивает у бота через

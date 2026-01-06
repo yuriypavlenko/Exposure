@@ -4,6 +4,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
+
 import java.time.LocalDateTime;
 
 
@@ -14,6 +16,7 @@ import java.time.LocalDateTime;
 
 @Getter
 @Entity
+@NoArgsConstructor
 @Table(name = "bots")
 public class Bot extends SessionMember {
     private String name;
