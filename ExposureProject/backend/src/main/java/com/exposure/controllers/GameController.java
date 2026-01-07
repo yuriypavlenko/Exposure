@@ -45,17 +45,20 @@ public class GameController {
         List<Long> selectedBotId = request.selectedBotId;
 
         if (user.isPresent() && !selectedBotId.isEmpty()) {
-
+            
+            // Assuming exactly two bots are selected for the game session
+            // Здесь код херня, нужно будет переделать когда будет возможность выбирать больше ботов.
             Optional<Bot> bot1 = botRepository.findBotById(selectedBotId.get(0));
             Optional<Bot> bot2 = botRepository.findBotById(selectedBotId.get(1));
 
-            if (bot1.isPresent() && bot2.isPresent()) {
+            if (bot1.isPresent() && bot2.isPresent()) { // Хуяк-хуяк-хуяк и в продакшн.
                 List<Bot> bots = List.of(bot1.get(), bot2.get());
 
-                int initialLimit = 5;
+                int initialLimit = 5; // Начальное количество вопросов на сессию. Костыль.
                 GameSession gameSession = new GameSession(user.get(), bots, initialLimit);
                 gameSessionRepository.save(gameSession);
-
+                
+                // Костыль, нужно будет переделать когда будет возможность выбирать больше ботов.
                 GameResponse gameResponse = new GameResponse(
                         gameSession.getId(),
                         List.of(new BotDTO(bot1.get().getId(), bot1.get().getName()),
