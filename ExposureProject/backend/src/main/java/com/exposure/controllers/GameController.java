@@ -1,9 +1,7 @@
 package com.exposure.controllers;
 
 import com.exposure.DTOs.Auth.AuthRequest;
-import com.exposure.DTOs.game.BotDTO;
-import com.exposure.DTOs.game.GameRequest;
-import com.exposure.DTOs.game.GameResponse;
+import com.exposure.DTOs.game.*;
 import com.exposure.interfaces.BotResponseInterface;
 import com.exposure.models.Bot;
 import com.exposure.models.GameSession;
@@ -11,17 +9,21 @@ import com.exposure.models.User;
 import com.exposure.repositories.BotRepository;
 import com.exposure.repositories.GameSessionRepository;
 import com.exposure.repositories.UserRepository;
+import com.exposure.services.BotService;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 
 /*
 
-TODO: В игровой сессии и его DTO добавить количество вопросов.
+@TODO: Решить проблему с фронтом:
+    Uncaught TypeError: can't access property "toUpperCase", bot.name is null
 
 */
 
@@ -34,7 +36,7 @@ public class GameController {
     private final UserRepository userRepository;
     private final GameSessionRepository gameSessionRepository;
 
-    private final BotResponseInterface botResponseInterface;
+    private final BotResponseInterface botResponseService;
 
 
     @PostMapping("/start")
@@ -50,13 +52,15 @@ public class GameController {
             if (bot1.isPresent() && bot2.isPresent()) {
                 List<Bot> bots = List.of(bot1.get(), bot2.get());
 
-                GameSession gameSession = new GameSession(user.get(), bots);
+                int initialLimit = 5;
+                GameSession gameSession = new GameSession(user.get(), bots, initialLimit);
                 gameSessionRepository.save(gameSession);
 
                 GameResponse gameResponse = new GameResponse(
                         gameSession.getId(),
                         List.of(new BotDTO(bot1.get().getId(), bot1.get().getName()),
-                                new BotDTO(bot2.get().getId(), bot2.get().getName()))
+                                new BotDTO(bot2.get().getId(), bot2.get().getName())),
+                        gameSession.getQuestionsLeft()
                         );
 
                 return ResponseEntity.ok(gameResponse);
@@ -65,25 +69,34 @@ public class GameController {
         return ResponseEntity.badRequest().build();
     }
 
-    
+    @Transactional
     @PostMapping("/question")
-    public void onQuestion() {
-        /*
-        На вход должно приходить:
-        - Айди пользователя
-        - Айди бота которому задали вопрос
-        - Айди сессии
-        - Вопрос
+    public ResponseEntity<?> onQuestion(@RequestBody QuestionRequest request) {
+        Optional<User> user = userRepository.findById(request.userId);
+        Optional<Bot> bot = botRepository.findBotById(request.botId);
+        Optional<GameSession> gameSession = gameSessionRepository.findById(request.sessionId);
+        String question = request.question;
 
-        Здесь мы проверяем существует ли пользователь, бот и сессия
-        Проверяем есть ли в сессии пользователь и бот
-        Проверяем осталось ли количество вопросов или нет
-        - Если нет то отправляем код 403.
+        if (user.isPresent() && bot.isPresent() && gameSession.isPresent() && !question.isBlank()) {
+            if (Objects.equals(gameSession.get().getUser().getId(), user.get().getId()) && gameSession.get().getBots().contains(bot.get())) {
+                if (gameSession.get().getQuestionsLeft() > 0) {
+                    String response = botResponseService.getResponse(bot.get(), question);
 
-        Если да, то мы отправляем бота и вопрос сервису
-        Сервис ответит нам, после этого забираем в сессии
-        один вопрос и после отправляем в DTO на фронт ответ.
-        */
+                    int questionsLeft = gameSession.get().decreaseQuestionLeft();
+
+                    QuestionResponse questionResponse = new QuestionResponse(response, questionsLeft);
+
+                    gameSessionRepository.save(gameSession.get());
+                    return ResponseEntity.ok(questionResponse);
+                } else {
+                    return ResponseEntity.status(403).build(); // Вопросов больше не осталось
+                }
+            } else {
+                return ResponseEntity.badRequest().build(); // Пользователь или бот не принадлежит сессии.
+            }
+        } else {
+            return ResponseEntity.badRequest().build(); // какой-то из параметров отсутствует.
+        }
     }
 
 

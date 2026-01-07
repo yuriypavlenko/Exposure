@@ -12,12 +12,6 @@ import java.util.List;
  */
 
 
-
-/*
-TODO: Добавь в игровю сессию количество доступных вопросов! 
-P.s. инициазировать их в конструкторе.
-*/
-
 @Getter
 @Entity
 @Table(name = "sessions")
@@ -25,7 +19,7 @@ P.s. инициазировать их в конструкторе.
 public class GameSession {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
+    private Long id;
 
     @ManyToOne
     @JoinColumn(name = "user_id")
@@ -39,8 +33,18 @@ public class GameSession {
     )
     private List<Bot> bots;
 
-    public GameSession(User user, List<Bot> bots) {
+    private int questionsLeft;
+
+    public GameSession(User user, List<Bot> bots, int initialQuestions) {
         this.user = user;
         this.bots = bots;
+        this.questionsLeft = initialQuestions;
+    }
+
+    public int decreaseQuestionLeft() {
+        if (this.questionsLeft > 0) {
+            this.questionsLeft--;
+        }
+        return this.questionsLeft;
     }
 }

@@ -22,7 +22,7 @@ import lombok.Setter;
 public abstract class SessionMember {
     @Id
     @GeneratedValue
-    private long id;
+    private Long id;
 
     private String name;
 
