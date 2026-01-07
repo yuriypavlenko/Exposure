@@ -27,6 +27,15 @@ public class MainController {
     // Mock function
     @GetMapping("/bots")
     public List<BotDTO> getBots() {
+
+        /*
+        
+        На будущее - нужно переделать фронт, чтобы был список ботов (просто нужно будет попробовать сделать
+        Lazy loading)
+        Ну и естественно, брать ботов из базы данных а не хардкодить.
+
+        */
+
         Optional<Bot> bot1 = botRepository.findBotById(Long.parseLong("2"));
         Optional<Bot> bot2 = botRepository.findBotById(Long.parseLong("3"));
 
