@@ -11,6 +11,11 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 
+/*
+Добавить потом сюда хэширование паролей через соль. Можешь взять механизм с Openchat, я там уже такое делал.
+*/
+
+
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
@@ -20,7 +25,6 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody AuthRequest request) {
-        // Проверяем, не занято ли имя
         System.out.println("register");
 
         if (userRepository.findByUsername(request.getUsername()).isPresent()) {

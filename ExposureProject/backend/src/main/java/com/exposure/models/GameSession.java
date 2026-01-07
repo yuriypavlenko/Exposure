@@ -12,6 +12,12 @@ import java.util.List;
  */
 
 
+
+/*
+TODO: Добавь в игровю сессию количество доступных вопросов! 
+P.s. инициазировать их в конструкторе.
+*/
+
 @Getter
 @Entity
 @Table(name = "sessions")
@@ -22,7 +28,7 @@ public class GameSession {
     private long id;
 
     @ManyToOne
-    @JoinColumn(name = "user_id") // создание внешнего ключа в таблице sessions
+    @JoinColumn(name = "user_id")
     private User user;
 
     @ManyToMany
