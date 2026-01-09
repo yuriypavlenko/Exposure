@@ -30,7 +30,7 @@ public class SecurityConfig {
                         // Разрешаем pre-flight запросы (OPTIONS) для всех
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/register", "/api/login", "/api/main/bots",
-                                "/api/game/start", "/api/game/question", "/api/game/trust",
+                                "/api/game/start", "/api/game/question", "/api/game/choice",
                                 "/api/game/endsession").permitAll()
                         .anyRequest().authenticated()
                 )

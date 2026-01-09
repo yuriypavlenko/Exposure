@@ -2,6 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
+/*
+
+TODO: переделать выбор с Доверяю на Обвиняю, изменить логику на бэке и фронте.
+
+*/
+
+
 export default function GameScreen() {
   const { state } = useLocation();
   const navigate = useNavigate();
@@ -33,7 +40,6 @@ export default function GameScreen() {
   };
 
   const askQuestion = async (botId) => {
-    console.log("Sending IDs:", { userId, botId, sessionId });
     if (!sessionId || !userId) {
         alert("Ошибка: сессия не инициализирована");
         return;
@@ -66,7 +72,22 @@ export default function GameScreen() {
     }
   };
 
-  // Централизованная обработка ошибок бэка
+  const handleChoice = async (botId) => {
+    try {
+        const response = await axios.post('http://localhost:8080/api/game/choice', { userId, botId, sessionId });
+        
+        // Передаем данные о том, был ли бот лжецом, через state
+        navigate('/results', { 
+            state: { 
+                isCorrect: response.data.isCorrect, // Проверь имя поля в твоем ChoiceResponse
+                botId: botId 
+            } 
+        });
+    } catch (e) {
+        handleError(e);
+    }
+
+     // Централизованная обработка ошибок бэка
   const handleError = (e) => {
     const status = e.response?.status;
     if (status === 403) {
@@ -79,16 +100,8 @@ export default function GameScreen() {
     }
     console.error("Game Error:", e);
   };
+};
 
-  const handleTrust = async (botId) => {
-    try {
-      await axios.post('http://localhost:8080/api/game/trust', { userId, botId, sessionId });
-      alert("Выбор сделан!");
-      navigate('/results');
-    } catch (e) {
-      handleError(e);
-    }
-  };
 
   const handleExit = () => {
     if (window.confirm("Вы уверены, что хотите выйти? Прогресс будет потерян.")) {
@@ -163,7 +176,7 @@ export default function GameScreen() {
             </div>
 
             <button 
-              onClick={() => handleTrust(bot.id)}
+              onClick={() => handleChoice(bot.id)}
               style={{ 
                 width: '100%', 
                 background: '#52c41a', 
@@ -178,7 +191,7 @@ export default function GameScreen() {
               onMouseOver={(e) => e.target.style.background = '#73d13d'}
               onMouseOut={(e) => e.target.style.background = '#52c41a'}
             >
-              Я ДОВЕРЯЮ {bot.name.toUpperCase()}
+              ОБВИНИТЬ {bot.name.toUpperCase()}
             </button>
           </div>
         ))}

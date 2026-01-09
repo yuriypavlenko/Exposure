@@ -17,9 +17,10 @@ import java.util.Optional;
 public class MainController {
     private final BotRepository botRepository;
 
-    // TODO: обработка сессии захода на сайт если нужно
     @GetMapping
     public String getPage() {
+
+        // TODO: если игрок на главной страничке то удаляем его игровые сессии, он ведь уже не в игре.
 
         return null;
     }
@@ -32,10 +33,11 @@ public class MainController {
         
         На будущее - нужно переделать фронт, чтобы был список ботов (просто нужно будет попробовать сделать
         Lazy loading)
-        Ну и естественно, брать ботов из базы данных а не хардкодить.
+        Ну и естественно, брать ботов из базы данных, а не хардкодить.
 
         */
 
+        // Это решение временное, так что лайно. Оно ограничивает главную страничку до 2 ботов.
         Optional<Bot> bot1 = botRepository.findBotById(Long.parseLong("2"));
         Optional<Bot> bot2 = botRepository.findBotById(Long.parseLong("3"));
 

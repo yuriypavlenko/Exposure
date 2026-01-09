@@ -33,12 +33,26 @@ public class GameSession {
     )
     private List<Bot> bots;
 
+    @ManyToMany
+    @JoinTable(
+            name = "session_lying_bots",
+            joinColumns = @JoinColumn(name = "session_id"),
+            inverseJoinColumns = @JoinColumn(name = "bot_id")
+    )
+    private List<Bot> lyingBots;
+
     private int questionsLeft;
 
-    public GameSession(User user, List<Bot> bots, int initialQuestions) {
+    public GameSession(User user, List<Bot> bots, List<Bot> lyingBots, int initialQuestions) {
         this.user = user;
         this.bots = bots;
+        this.lyingBots = lyingBots;
         this.questionsLeft = initialQuestions;
+    }
+
+    public boolean isBotLying(Long botId) {
+        return lyingBots.stream()
+                .anyMatch(bot -> bot.getId().equals(botId));
     }
 
     public int decreaseQuestionLeft() {
