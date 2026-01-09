@@ -8,10 +8,10 @@ import lombok.Setter;
 @Setter
 public class QuestionResponse {
     public String answer;
-    public int remainingQuestions;
+    public int questionsLeft;
 
-    public QuestionResponse(String answer, int remainingQuestions) {
+    public QuestionResponse(String answer, int questionsLeft) {
         this.answer = answer;
-        this.remainingQuestions = remainingQuestions;
+        this.questionsLeft = questionsLeft;
     }
 }

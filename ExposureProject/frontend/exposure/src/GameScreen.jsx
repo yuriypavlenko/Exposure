@@ -8,7 +8,12 @@ export default function GameScreen() {
   
   // Безопасное извлечение данных из state
   const sessionData = state?.session || {};
-  const { sessionId, bots = [], userId, questionsLeft: initialQuestions } = sessionData;
+  const { 
+    sessionId: sessionId,
+    userId: userId,
+    bots: bots = [], 
+    questionsLeft: initialQuestions 
+  } = sessionData;
 
   const [remainingQuestions, setRemainingQuestions] = useState(initialQuestions ?? 0);
   const [inputs, setInputs] = useState({});
@@ -28,6 +33,12 @@ export default function GameScreen() {
   };
 
   const askQuestion = async (botId) => {
+    console.log("Sending IDs:", { userId, botId, sessionId });
+    if (!sessionId || !userId) {
+        alert("Ошибка: сессия не инициализирована");
+        return;
+    }
+
     const questionText = inputs[botId];
     if (!questionText || remainingQuestions <= 0) return;
     
@@ -71,7 +82,7 @@ export default function GameScreen() {
 
   const handleTrust = async (botId) => {
     try {
-      await axios.post('http://localhost:8080/api/game/trust', { sessionId, botId, userId });
+      await axios.post('http://localhost:8080/api/game/trust', { userId, botId, sessionId });
       alert("Выбор сделан!");
       navigate('/results');
     } catch (e) {

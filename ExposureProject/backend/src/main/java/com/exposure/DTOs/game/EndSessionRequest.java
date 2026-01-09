@@ -1,5 +1,8 @@
 package com.exposure.DTOs.game;
 
+import lombok.Getter;
+import lombok.Setter;
+
 @Getter
 @Setter
 public class EndSessionRequest {

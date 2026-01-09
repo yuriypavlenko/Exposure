@@ -19,7 +19,6 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Table(name = "bots")
 public class Bot extends SessionMember {
-    private String name;
     private String personality;
 
     private LocalDateTime createdAt;
@@ -27,7 +26,6 @@ public class Bot extends SessionMember {
     public Bot(String name, String personality) {
         super(name);
 
-        this.name = name;
         this.personality = personality;
     }
 
