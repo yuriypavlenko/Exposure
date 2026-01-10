@@ -11,7 +11,7 @@ import java.util.List;
     Game session model
  */
 
-
+// TODO: add field "active" to know if the session is active or not.
 @Getter
 @Entity
 @Table(name = "sessions")

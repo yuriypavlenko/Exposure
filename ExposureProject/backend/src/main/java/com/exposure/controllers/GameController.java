@@ -41,9 +41,13 @@ public class GameController {
                 java.util.Collections.shuffle(new java.util.ArrayList<>(bots));
                 Bot randomLiar = bots.get(new java.util.Random().nextInt(bots.size()));
                 List<Bot> lyingBots = List.of(randomLiar);
-
+                
+                // Думаю потом можно добавить это как настройку перед началом игры.
                 int initialLimit = 5; // Потом переместить это, а не магически колдовать числа.
 
+
+                // Тут еще очень важно добавить в сессию ссылки на чаты ботов и сохранить их в сессии.
+                // (ну и естественно создать чаты и сообщения)
                 GameSession gameSession = new GameSession(user.get(), bots, lyingBots, initialLimit);
                 gameSessionRepository.save(gameSession);
 
@@ -82,10 +86,12 @@ public class GameController {
 
         if (!gameSession.getUser().getId().equals(user.getId())) return ResponseEntity.badRequest().build();
         if (!gameSession.getBots().contains(bot)) return ResponseEntity.badRequest().build();
-        if (gameSession.getQuestionsLeft() <= 0) return ResponseEntity.status(403).build(); // как он попадает на эту ошибку при choice?..
+        if (gameSession.getQuestionsLeft() <= 0) return ResponseEntity.status(403).build();
 
         BotStates state = gameSession.isBotLying(bot.getId()) ? BotStates.LYING : BotStates.NOT_LYING;
         String response = botResponseService.getResponse(bot, request.question, state);
+        
+        // Здесь мы добавляем в чат сообщение от бота и игрока.
 
         gameSession.decreaseQuestionLeft();
         gameSessionRepository.save(gameSession);
