@@ -5,10 +5,12 @@ import axios from 'axios';
 export default function MainScreen() {
   const navigate = useNavigate();
   const [bots, setBots] = useState([]);
-  const [selectedBotIds, setSelectedBotIds] = useState([]); // Теперь массив
+  const [selectedBotIds, setSelectedBotIds] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const userToken = localStorage.getItem('token');
+
+  // TODO: Нужно добавить здесь вызов GET для GetPage и кидать туда токен.
 
   useEffect(() => {
     const fetchBots = async () => {
@@ -26,18 +28,13 @@ export default function MainScreen() {
     fetchBots();
   }, [userToken]);
 
-  // Логика выбора
   const toggleBotSelection = (id) => {
     setSelectedBotIds((prev) => {
       if (prev.includes(id)) {
-        // Убираем, если уже выбран
         return prev.filter(botId => botId !== id);
       } else if (prev.length < 2) {
-        // Добавляем, если выбрано меньше 2-х
         return [...prev, id];
       } else {
-        // Если уже выбрано 2, а мы тыкаем в третьего — ничего не делаем
-        // (Или можно заменять последнего, но лучше просто ограничить)
         return prev;
       }
     });
@@ -64,6 +61,8 @@ export default function MainScreen() {
 
   if (loading) return <div>Загрузка ботов...</div>;
 
+
+  // TODO: Вынести это в CSS файл после.
   return (
     <div style={{ textAlign: 'center', marginTop: '50px' }}>
       <h1>Кто лжет?</h1>

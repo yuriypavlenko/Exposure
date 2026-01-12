@@ -45,7 +45,7 @@ public class GameController {
                 Bot randomLiar = mutableBots.getFirst();
                 List<Bot> lyingBots = List.of(randomLiar);
 
-                int initialLimit = 5;
+                int initialLimit = 5; // TODO: Убрать в будущем эту логику в настройки.
 
                 GameSession gameSession = new GameSession(user, bots, lyingBots, initialLimit);
 
@@ -79,6 +79,7 @@ public class GameController {
     /*
     TODO: org.postgresql.util.PSQLException: ERROR: value too long for type character varying(255)
         Это нужно решить!
+        Ограничение на 500 символов с 255 + обработку от ИИ на большое сообщение.
     */
 
     @PostMapping("/question")
@@ -142,20 +143,4 @@ public class GameController {
             return ResponseEntity.ok(new ChoiceResponse(false, bot.getId()));
         }
     }
-
-    // Думаю можно удалить ведь у нас и так будет сессия чиститься по приходу в main.
-    // @PostMapping("/endsession")
-    // public void endSession() {
-        /*
-        На вход должно приходить:
-        - Айди пользователя
-        - Айди сессии
-
-        Здесь мы проверяем существует ли пользователь и сессия
-        Проверяем есть ли в сессии пользователь
-        - Если нет то отправляем код 400, Bad request.
-
-        Если все ок, то завершаем сессию.
-        */
-    // }
 }
