@@ -3,9 +3,7 @@ package com.exposure.controllers;
 import com.exposure.DTOs.game.*;
 import com.exposure.DTOs.service.BotStates;
 import com.exposure.interfaces.BotResponseInterface;
-import com.exposure.models.Bot;
-import com.exposure.models.GameSession;
-import com.exposure.models.User;
+import com.exposure.models.*;
 import com.exposure.repositories.BotRepository;
 import com.exposure.repositories.GameSessionRepository;
 import com.exposure.repositories.UserRepository;
@@ -13,9 +11,11 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-
 
 
 @RequiredArgsConstructor
@@ -31,52 +31,59 @@ public class GameController {
 
     @PostMapping("/start")
     public ResponseEntity<?> getPage(@RequestBody GameRequest request) {
-        Optional<User> user = userRepository.findById(Long.parseLong(request.userId));
+        Optional<User> userOpt = userRepository.findById(Long.parseLong(request.userId));
         List<Long> selectedBotIds = request.selectedBotId;
 
-        if (user.isPresent() && selectedBotIds != null && !selectedBotIds.isEmpty()) {
+        if (userOpt.isPresent() && selectedBotIds != null && !selectedBotIds.isEmpty()) {
             List<Bot> bots = botRepository.findAllById(selectedBotIds);
 
             if (bots.size() == selectedBotIds.size()) {
-                java.util.Collections.shuffle(new java.util.ArrayList<>(bots));
-                Bot randomLiar = bots.get(new java.util.Random().nextInt(bots.size()));
+                User user = userOpt.get();
+
+                List<Bot> mutableBots = new ArrayList<>(bots);
+                Collections.shuffle(mutableBots);
+                Bot randomLiar = mutableBots.getFirst();
                 List<Bot> lyingBots = List.of(randomLiar);
-                
-                // Думаю потом можно добавить это как настройку перед началом игры.
-                int initialLimit = 5; // Потом переместить это, а не магически колдовать числа.
 
+                int initialLimit = 5;
 
-                // Тут еще очень важно добавить в сессию ссылки на чаты ботов и сохранить их в сессии.
-                // (ну и естественно создать чаты и сообщения)
-                GameSession gameSession = new GameSession(user.get(), bots, lyingBots, initialLimit);
+                GameSession gameSession = new GameSession(user, bots, lyingBots, initialLimit);
+
+                for (Bot bot : bots) {
+                    Chat chat = new Chat();
+
+                    chat.getMembers().add(user);
+                    chat.getMembers().add(bot);
+
+                    gameSession.addChat(chat);
+                }
+
                 gameSessionRepository.save(gameSession);
 
                 List<BotDTO> botDTOs = bots.stream()
                         .map(b -> new BotDTO(b.getId(), b.getName()))
                         .toList();
 
-                GameResponse gameResponse = new GameResponse(
+                return ResponseEntity.ok(new GameResponse(
                         gameSession.getId(),
-                        user.get().getId(),
+                        user.getId(),
                         botDTOs,
                         gameSession.getQuestionsLeft()
-                );
-
-                return ResponseEntity.ok(gameResponse);
+                ));
             }
         }
         return ResponseEntity.badRequest().build();
     }
 
 
-    // TODO: добавить чаты, сообщения и добавлять их по мере игры.
+    /*
+    TODO: org.postgresql.util.PSQLException: ERROR: value too long for type character varying(255)
+        Это нужно решить!
+    */
+
     @PostMapping("/question")
     @Transactional
     public ResponseEntity<?> question(@RequestBody QuestionRequest request) {
-        if (request.userId == null || request.botId == null || request.sessionId == null) {
-            return ResponseEntity.badRequest().body("ID cannot be null");
-        }
-
         User user = userRepository.findById(request.userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         Bot bot = botRepository.findById(request.botId)
@@ -86,19 +93,32 @@ public class GameController {
 
         if (!gameSession.getUser().getId().equals(user.getId())) return ResponseEntity.badRequest().build();
         if (!gameSession.getBots().contains(bot)) return ResponseEntity.badRequest().build();
-        if (gameSession.getQuestionsLeft() <= 0) return ResponseEntity.status(403).build();
+        if (gameSession.getQuestionsLeft() <= 0) return ResponseEntity.status(403).body("No questions left");
+
+        Chat chat = gameSession.getChats().stream()
+                .filter(c -> c.getMembers().contains(user) && c.getMembers().contains(bot))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("Chat between user and bot not initialized"));
 
         BotStates state = gameSession.isBotLying(bot.getId()) ? BotStates.LYING : BotStates.NOT_LYING;
-        String response = botResponseService.getResponse(bot, request.question, state);
-        
-        // Здесь мы добавляем в чат сообщение от бота и игрока.
+        String botResponseText = botResponseService.getResponse(bot, request.question, state);
+
+        saveMessage(chat, user, request.question);
+        saveMessage(chat, bot, botResponseText);
 
         gameSession.decreaseQuestionLeft();
-        gameSessionRepository.save(gameSession);
-
-        return ResponseEntity.ok(new QuestionResponse(response, gameSession.getQuestionsLeft()));
+        return ResponseEntity.ok(new QuestionResponse(botResponseText, gameSession.getQuestionsLeft()));
     }
 
+    private void saveMessage(Chat chat, SessionMember sender, String text) {
+        Message message = new Message();
+        message.setChat(chat);
+        message.setSender(sender);
+        message.setText(text);
+        message.setSentAt(LocalDateTime.now());
+
+        chat.getMessages().add(message);
+    }
 
     @PostMapping("/choice")
     public ResponseEntity<?> choice(@RequestBody ChoiceRequest request) {
@@ -124,8 +144,8 @@ public class GameController {
     }
 
     // Думаю можно удалить ведь у нас и так будет сессия чиститься по приходу в main.
-    //@PostMapping("/endsession")
-    //public void endSession() {
+    // @PostMapping("/endsession")
+    // public void endSession() {
         /*
         На вход должно приходить:
         - Айди пользователя
@@ -137,5 +157,5 @@ public class GameController {
 
         Если все ок, то завершаем сессию.
         */
-    //}
+    // }
 }
