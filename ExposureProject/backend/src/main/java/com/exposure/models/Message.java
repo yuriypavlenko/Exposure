@@ -27,6 +27,7 @@ public class Message {
     @JoinColumn(name = "sender_id", nullable = false)
     private SessionMember sender;
 
+    @Column(length = 1000)
     private String text;
 
     private LocalDateTime sentAt = LocalDateTime.now();

@@ -76,12 +76,6 @@ public class GameController {
     }
 
 
-    /*
-    TODO: org.postgresql.util.PSQLException: ERROR: value too long for type character varying(255)
-        Это нужно решить!
-        Ограничение на 500 символов с 255 + обработку от ИИ на большое сообщение.
-    */
-
     @PostMapping("/question")
     @Transactional
     public ResponseEntity<?> question(@RequestBody QuestionRequest request) {
@@ -102,7 +96,11 @@ public class GameController {
                 .orElseThrow(() -> new IllegalStateException("Chat between user and bot not initialized"));
 
         BotStates state = gameSession.isBotLying(bot.getId()) ? BotStates.LYING : BotStates.NOT_LYING;
-        String botResponseText = botResponseService.getResponse(bot, request.question, state);
+        String botResponseText = botResponseService.getResponse(bot, request.question, state, chat);
+
+        if (botResponseText != null && botResponseText.length() > 1000) {
+            botResponseText = botResponseText.substring(0, 997) + "...";
+        }
 
         saveMessage(chat, user, request.question);
         saveMessage(chat, bot, botResponseText);
@@ -120,6 +118,7 @@ public class GameController {
 
         chat.getMessages().add(message);
     }
+
 
     @PostMapping("/choice")
     public ResponseEntity<?> choice(@RequestBody ChoiceRequest request) {

@@ -2,9 +2,17 @@ package com.exposure.controllers;
 
 import com.exposure.DTOs.game.BotDTO;
 import com.exposure.models.Bot;
+import com.exposure.models.GameSession;
+import com.exposure.models.User;
 import com.exposure.repositories.BotRepository;
+import com.exposure.repositories.GameSessionRepository;
+import com.exposure.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -16,10 +24,22 @@ import java.util.Optional;
 @RequestMapping("/api/main")
 public class MainController {
     private final BotRepository botRepository;
+    private final GameSessionRepository gameSessionRepository;
+    private final UserRepository userRepository;
 
+    @Transactional
     @GetMapping
-    public void getPage() { // TODO: Принимать здесь токен пользователя
-        // TODO: Проверяем существует ли пользователь, проверяем есть ли активные сессии и деактивируем их.
+    public ResponseEntity<?> getPage(@RequestHeader("Authorization") String token) {
+        Long userId = Long.parseLong(token);
+
+        if (userRepository.findById(userId).isPresent()) {
+            List<GameSession> activeSessions = gameSessionRepository.findAllByUserIdAndIsActiveTrue(userId);
+            activeSessions.forEach(session -> session.setIsActive(false));
+
+            return ResponseEntity.ok().build();
+        }
+
+        return ResponseEntity.badRequest().build();
     }
 
     // Mock function

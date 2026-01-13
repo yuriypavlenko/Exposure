@@ -13,19 +13,27 @@ export default function MainScreen() {
   // TODO: Нужно добавить здесь вызов GET для GetPage и кидать туда токен.
 
   useEffect(() => {
-    const fetchBots = async () => {
+    const initializePage = async () => {
       try {
+        await axios.get('http://localhost:8080/api/main', {
+          headers: { Authorization: userToken }
+        });
+
         const response = await axios.get('http://localhost:8080/api/main/bots', {
           headers: { Authorization: userToken }
         });
+        
         setBots(response.data);
         setLoading(false);
       } catch (error) {
-        console.error("Ошибка при загрузке ботов", error);
+        console.error("Ошибка при инициализации страницы или загрузке ботов", error);
         setLoading(false);
       }
     };
-    fetchBots();
+
+    if (userToken) {
+      initializePage();
+    }
   }, [userToken]);
 
   const toggleBotSelection = (id) => {

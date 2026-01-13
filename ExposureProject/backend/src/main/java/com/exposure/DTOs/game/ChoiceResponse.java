@@ -6,11 +6,11 @@ import lombok.Setter;
 @Getter
 @Setter
 public class ChoiceResponse {
-    public Boolean isCorrect;
+    public Boolean isLiar;
     public Long botId;
 
-    public ChoiceResponse(Boolean isCorrect, Long botId) {
-        this.isCorrect = isCorrect;
+    public ChoiceResponse(Boolean isLiar, Long botId) {
+        this.isLiar = isLiar;
         this.botId = botId;
     }
 }

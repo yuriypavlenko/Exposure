@@ -2,11 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-/*
-
-TODO: переделать выбор с Доверяю на Обвиняю, изменить логику на бэке и фронте.
-
-*/
 
 
 export default function GameScreen() {
@@ -79,7 +74,7 @@ export default function GameScreen() {
         // Передаем данные о том, был ли бот лжецом, через state
         navigate('/results', { 
             state: { 
-                isCorrect: response.data.isCorrect, // Проверь имя поля в твоем ChoiceResponse
+                isLiar: response.data.isLiar, // Проверь имя поля в твоем ChoiceResponse
                 botId: botId 
             } 
         });

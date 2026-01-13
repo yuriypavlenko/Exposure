@@ -31,6 +31,7 @@ public class Chat {
     private Set<SessionMember> members = new HashSet<>();
 
     @OneToMany(mappedBy = "chat", cascade = CascadeType.ALL)
+    @OrderBy("sentAt ASC")
     private List<Message> messages = new ArrayList<>();
 
     public boolean hasMember(SessionMember member) {
