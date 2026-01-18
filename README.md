@@ -48,3 +48,32 @@ All generation is performed locally, without relying on cloud services or paid A
 
 #### Project Goal
 Exposure explores the potential of creating interactive narratives where AI acts as a participant in a logical system, capable of making mistakes, lying, and concealing information.
+
+## How to run
+### Prerequisites
+- Java 21
+- Node.js (v18 or higher) & npm
+- Docker & Docker Compose
+- Ollama
+
+### Step 1: Set up AI (Ollama)
+1) Install Ollama [here](https://ollama.com/).
+2) Pull the model: `ollama pull llama3`
+3) Ensure Ollama is running locally (usually on port 11434).
+
+### Step 2: Database (Docker)
+Navigate to the folder with `docker-compose.yml` and run `docker-compose up -d`
+
+### Step 3: Backend (Spring Boot)
+1) Navigate to the backend directory *backend*.
+2) Check configurations in `application.properties`
+3) Build and run the application:\
+For windows: `./mvnw.cmd spring-boot:run`\
+For Linux/MacOS: `./mvnw spring-boot:run`\
+The server will start on http:`http://localhost:8080`
+
+### Step 4: Frontend (React)
+1) Navigate to the frontend directory *frontend*.
+2) Install dependencies: `npm install`
+3) Start the development server: `npm run dev`\
+   The UI will be available at `http://localhost:5173`
