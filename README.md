@@ -58,11 +58,11 @@ Exposure explores the potential of creating interactive narratives where AI acts
 
 ### Step 1: Set up AI (Ollama)
 1) Install Ollama [here](https://ollama.com/).
-2) Pull the model: `ollama pull llama3`
+2) Pull the model: `ollama pull llama3.1`
 3) Ensure Ollama is running locally (usually on port 11434).
 
 ### Step 2: Database (Docker)
-Navigate to the folder with `docker-compose.yml` and run `docker-compose up -d`
+Navigate to the backend directory *backend*. Find `docker-compose.yml` and run `docker-compose up -d`
 
 ### Step 3: Backend (Spring Boot)
 1) Navigate to the backend directory *backend*.
