@@ -13,11 +13,11 @@ export default function MainScreen() {
   useEffect(() => {
     const initializePage = async () => {
       try {
-        await axios.get('http://localhost:8080/api/main', {
+        await axios.get('http://localhost:9090/api/main', {
           headers: { Authorization: userToken }
         });
 
-        const response = await axios.get('http://localhost:8080/api/main/bots', {
+        const response = await axios.get('http://localhost:9090/api/main/bots', {
           headers: { Authorization: userToken }
         });
         
@@ -53,7 +53,7 @@ export default function MainScreen() {
     }
 
     try {
-      const response = await axios.post('http://localhost:8080/api/game/start', {
+      const response = await axios.post('http://localhost:9090/api/game/start', {
         userId: userToken,
         selectedBotId: selectedBotIds // Отправляем массив ID
       });

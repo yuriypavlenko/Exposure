@@ -13,7 +13,7 @@ const AuthScreen = ({ setIsAuthenticated }) => {
     const payload = { username, password };
 
     try {
-      const response = await fetch(`http://localhost:8080${endpoint}`, {
+      const response = await fetch(`http://localhost:9090${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

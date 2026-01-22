@@ -44,7 +44,7 @@ export default function GameScreen() {
     if (!questionText || remainingQuestions <= 0) return;
     
     try {
-      const res = await axios.post('http://localhost:8080/api/game/question', {
+      const res = await axios.post('http://localhost:9090/api/game/question', {
         userId,
         botId,
         sessionId,
@@ -69,7 +69,7 @@ export default function GameScreen() {
 
   const handleChoice = async (botId) => {
     try {
-        const response = await axios.post('http://localhost:8080/api/game/choice', { userId, botId, sessionId });
+        const response = await axios.post('http://localhost:9090/api/game/choice', { userId, botId, sessionId });
         
         // Передаем данные о том, был ли бот лжецом, через state
         navigate('/results', { 
