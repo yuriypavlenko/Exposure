@@ -8,6 +8,8 @@ import com.exposure.repositories.*;
 import com.exposure.services.MissionService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
@@ -29,6 +31,8 @@ public class GameController {
 
     private final MissionService missionService;
     private final BotResponseInterface botResponseService;
+
+    private final Logger logger = LoggerFactory.getLogger(GameController.class);
 
     @Transactional
     @PostMapping("/start")
@@ -55,15 +59,13 @@ public class GameController {
                 Bot randomLiar = mutableBots.getFirst();
                 List<Bot> lyingBots = List.of(randomLiar);
 
-                /*
-                Здесь добавить логику создания/получения истории.
-                 */
 
                 Mission mission = missionOpt.get();
                 Story story;
                 try {
-                    story = missionService.generateStory(mission, bots, lyingBots);
+                    story = missionService.generateStory(mission, bots.size(), lyingBots.size());
                 } catch (Exception e) {
+                    logger.error(e.toString());
                     return ResponseEntity.status(500).build();
                 }
 

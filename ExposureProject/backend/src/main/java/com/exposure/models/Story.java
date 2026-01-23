@@ -19,7 +19,7 @@ public class Story {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "mission_id", referencedColumnName = "id")
+    @JoinColumn(name = "mission_id", referencedColumnName = "id", unique = false)
     private Mission mission;
 
     @Column(columnDefinition = "TEXT")
