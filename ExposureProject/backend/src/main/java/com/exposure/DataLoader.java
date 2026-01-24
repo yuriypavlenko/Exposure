@@ -37,6 +37,8 @@ public class DataLoader implements CommandLineRunner {
                     "mission about killing John",
                     "John very rich man. He stays in his house at party and got killed",
                     2);
+
+            missionRepository.save(default_mission);
         }
     }
 }

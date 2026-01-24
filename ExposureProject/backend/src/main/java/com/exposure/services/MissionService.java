@@ -88,7 +88,7 @@ public class MissionService {
         }
 
         try {
-            validateStory(response);
+            validateStory(response, totalRoles);
         } catch (Exception e) {
             logger.error("Invalid validation");
             logger.error("Prompt:\n{}", fullPrompt);
@@ -124,7 +124,18 @@ public class MissionService {
         return raw.substring(start, end + 1);
     }
 
-    private void validateStory(StoryResponse story) {
+
+    /*
+    Нужно проверить столько ли ролей сколько указано в total_roles в данной структуре.
+     */
+    private void validateStory(StoryResponse story, int total_roles) {
+
+        if (story.roles_data().size() != total_roles) {
+            throw new IllegalStateException(
+                    "Expected " + total_roles + " roles, but found " + story.roles_data().size()
+            );
+        }
+
         long guiltyCount = story.roles_data()
                 .stream()
                 .filter(RolesData::isGuilty)
@@ -186,59 +197,62 @@ public class MissionService {
 
 
     /*
-    TODO
-    В description и solution нужно тоже указывать.
-    Добавить описание роли в истории после роли в roles_data
+    Нужно решить проблему с тем, что если передается total_bots = 2, а лгут 1, то он создаст 3 бота. Нам нужно чтобы один ИЗ них лгал, а не еще одного
+    И еще - нам вообще нужны доказательства? У нас это пишет создатель миссии и показывается в документах, но оно почему-то генерируется.
      */
     private String storyJsonSchema() {
         return """
-            OUTPUT CONTRACT (STRICT):
-        
-            You must return a SINGLE valid JSON object.
-            Any text outside JSON is FORBIDDEN.
-        
-            STRUCTURE:
-        
-            1. story_meta (object)
-               - description: short description of the incident
-               - solution: textual explanation of who is guilty and why
-                 (DO NOT return role id only)
-        
-            2. truth_timeline (array)
-               Chronological list of real events.
-               Each item:
-               - time: string in format HH:mm
-               - event: what actually happened
-               - location: where it happened
-               - witnesses: array of role identifiers (example: "role1")
-        
-            3. roles_data (array)
-               List of abstract roles involved in the incident.
-        
-               Each role MUST contain ALL fields:
-               - role: identifier ("role1", "role2", ...)
-               - isGuilty: boolean
-               - motive: reason for committing or potentially committing the crime (motive must never be null, use empty string instead)
-               - alibi: what this role claims
-               - actual: what this role actually did
-        
-            4. clues (array)
-               Physical or logical evidence.
-               Each item:
-               - type
-               - description
-               - found_at (location or role id)
-        
-            RULES:
-            - Use ONLY abstract roles (role1, role2, role3...)
-            - Exactly ONE role must have isGuilty = true
-            - Guilty role MUST lie in alibi
-            - All non-guilty roles MUST tell the truth
-            - Do NOT use names
-            - Do NOT mention bots
-            - Do NOT use markdown
-            - Do NOT add explanations
-            - Output JSON only
-            """;
+        OUTPUT CONTRACT (STRICT):
+
+        You must return a SINGLE valid JSON object.
+        Any text outside JSON is FORBIDDEN.
+
+        STRUCTURE:
+
+        1. story_meta (object)
+           - description: short description of the incident.
+             Must reference roles only via their role_description.
+           - solution: textual explanation of who is guilty and why.
+             Must describe the guilty role using role_description,
+             NOT role identifiers.
+
+        2. truth_timeline (array)
+           Chronological list of real events.
+           Each item:
+           - time: string in format HH:mm
+           - event: what actually happened
+           - location: where it happened
+           - witnesses: array of role identifiers (example: "role1")
+
+        3. roles_data (array)
+           List of abstract roles involved in the incident.
+
+           Each role MUST contain ALL fields:
+           - role: identifier ("role1", "role2", ...)
+           - role_description: who this role is in the context of the incident
+           - isGuilty: boolean
+           - motive: reason for committing or potentially committing the crime
+                     (must never be null, use empty string instead)
+           - alibi: what this role claims
+           - actual: what this role actually did
+
+        4. clues (array)
+           Physical or logical evidence.
+           Each item:
+           - type
+           - description
+           - found_at (location or role id)
+
+        RULES:
+        - Use ONLY abstract roles (role1, role2, role3...)
+        - Exactly ONE role must have isGuilty = true
+        - Guilty role MUST lie in alibi
+        - All non-guilty roles MUST tell the truth
+        - Do NOT use names
+        - Do NOT mention bots
+        - Do NOT use markdown
+        - Do NOT add explanations
+        - Output JSON only
+        """;
     }
 }
