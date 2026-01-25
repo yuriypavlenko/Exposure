@@ -52,15 +52,25 @@ public class GameSession {
     @JoinColumn(name = "session_id")
     private List<Chat> chats = new ArrayList<>();
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "mission_id")
+    private Mission mission;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "story_id")
+    private Story story;
+
     private int questionsLeft;
 
     private Boolean isActive;
 
-    public GameSession(User user, List<Bot> bots, List<Bot> lyingBots, int initialQuestions) {
+    public GameSession(User user, List<Bot> bots, List<Bot> lyingBots, int initialQuestions, Mission mission, Story story) {
         this.user = user;
         this.bots = bots;
         this.lyingBots = lyingBots;
         this.questionsLeft = initialQuestions;
+        this.mission = mission;
+        this.story = story;
         this.isActive = true;
     }
 

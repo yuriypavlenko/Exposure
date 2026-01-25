@@ -34,6 +34,10 @@ public class GameController {
 
     private final Logger logger = LoggerFactory.getLogger(GameController.class);
 
+
+    /*
+        TODO: нужно сделать защиту против того, что пользователь вызовет старт игры несколько раз и не завершит сессию.
+     */
     @Transactional
     @PostMapping("/start")
     public ResponseEntity<?> getPage(@RequestBody GameRequest request) { // TODO: Переделать GameRequest - добавить выбор Id миссии.
@@ -72,7 +76,7 @@ public class GameController {
 
                 int initialLimit = 5; // TODO: Убрать в будущем эту логику в настройки.
 
-                GameSession gameSession = new GameSession(user, bots, lyingBots, initialLimit);
+                GameSession gameSession = new GameSession(user, bots, lyingBots, initialLimit, mission, story);
 
                 for (Bot bot : bots) {
                     Chat chat = new Chat();
@@ -83,8 +87,7 @@ public class GameController {
                     gameSession.addChat(chat);
                 }
 
-                gameSessionRepository.save(gameSession); // Поскольку сделал метод транзакционным то вроде можно убирать.
-                // P.s. Я не знаю, нужно ли делать @Transactional или нет. У меня тут просто Story генерируется... просто для безопасности.
+                gameSessionRepository.save(gameSession);
 
                 List<BotDTO> botDTOs = bots.stream()
                         .map(b -> new BotDTO(b.getId(), b.getName()))
@@ -122,8 +125,10 @@ public class GameController {
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("Chat between user and bot not initialized"));
 
+        Story story = gameSession.getStory();
+
         BotStates state = gameSession.isBotLying(bot.getId()) ? BotStates.LYING : BotStates.NOT_LYING;
-        String botResponseText = botResponseService.getResponse(bot, request.question, state, chat);
+        String botResponseText = botResponseService.getResponse(bot, request.question, state, chat, story);
 
         if (botResponseText != null && botResponseText.length() > 1000) {
             botResponseText = botResponseText.substring(0, 997) + "...";

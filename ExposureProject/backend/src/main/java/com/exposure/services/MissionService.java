@@ -177,7 +177,6 @@ public class MissionService {
             - Guilty role must be among those who lie
             - All other roles tell the truth
             - Timeline must be logically consistent
-            - Clues must confirm the real version of events
             - Alibis may conflict with reality only for lying roles
     
             OUTPUT RULES:
@@ -195,64 +194,66 @@ public class MissionService {
         );
     }
 
-
-    /*
-    Нужно решить проблему с тем, что если передается total_bots = 2, а лгут 1, то он создаст 3 бота. Нам нужно чтобы один ИЗ них лгал, а не еще одного
-    И еще - нам вообще нужны доказательства? У нас это пишет создатель миссии и показывается в документах, но оно почему-то генерируется.
-     */
     private String storyJsonSchema() {
         return """
         OUTPUT CONTRACT (STRICT):
-
+        
         You must return a SINGLE valid JSON object.
         Any text outside JSON is FORBIDDEN.
-
+        
         STRUCTURE:
-
+        
         1. story_meta (object)
-           - description: short description of the incident.
-             Must reference roles only via their role_description.
-           - solution: textual explanation of who is guilty and why.
-             Must describe the guilty role using role_description,
-             NOT role identifiers.
-
+           - description: short neutral description of the incident.
+        
         2. truth_timeline (array)
-           Chronological list of real events.
+           CRITICAL STRUCTURE.
+           Represents objective reality of what truly happened.
+        
+           Each entry describes a concrete moment in time.
+           Events must be descriptive and neutral.
+           Events MUST NOT reference role identifiers directly inside text.
+        
            Each item:
-           - time: string in format HH:mm
-           - event: what actually happened
-           - location: where it happened
-           - witnesses: array of role identifiers (example: "role1")
-
+           {
+             "time": "HH:mm",
+             "event": "Objective description of what occurred.",
+             "location": "Physical place where it happened.",
+             "witnesses": ["role1", "role2"]
+           }
+        
+           RULES:
+           - Timeline must be chronological.
+           - Events should include movements, sounds, interactions, absences, changes.
+           - Avoid conclusions or interpretations.
+           - Do NOT reveal guilt directly.
+           - The system will later convert this timeline into role-specific perspectives.
+        
         3. roles_data (array)
-           List of abstract roles involved in the incident.
-
-           Each role MUST contain ALL fields:
-           - role: identifier ("role1", "role2", ...)
-           - role_description: who this role is in the context of the incident
-           - isGuilty: boolean
-           - motive: reason for committing or potentially committing the crime
-                     (must never be null, use empty string instead)
-           - alibi: what this role claims
-           - actual: what this role actually did
-
-        4. clues (array)
-           Physical or logical evidence.
-           Each item:
-           - type
-           - description
-           - found_at (location or role id)
-
+        
+           IMPORTANT:
+           - Number of roles MUST equal total_roles requested by user.
+           - Exactly ONE role must have isGuilty = true.
+           - All others must have isGuilty = false.
+        
+           Each role:
+        
+           {
+             "role": "role1",
+             "role_description": "Occupation or narrative position",
+             "isGuilty": boolean,
+             "motive": "Reason for possible involvement (empty string allowed for innocents)",
+             "alibi": "What the role CLAIMS they were doing at the time",
+             "actual": "What the role was actually doing"
+           }
+        
         RULES:
-        - Use ONLY abstract roles (role1, role2, role3...)
-        - Exactly ONE role must have isGuilty = true
-        - Guilty role MUST lie in alibi
-        - All non-guilty roles MUST tell the truth
-        - Do NOT use names
-        - Do NOT mention bots
-        - Do NOT use markdown
-        - Do NOT add explanations
-        - Output JSON only
+        - role identifiers must be exactly: role1, role2, role3, ...
+        - Do NOT include character names.
+        - Do NOT include solution field.
+        - Do NOT include clues field.
+        - Do NOT include markdown.
+        - All strings must be meaningful and non-null.
         """;
     }
 }

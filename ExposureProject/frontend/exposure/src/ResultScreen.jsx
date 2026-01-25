@@ -5,13 +5,10 @@ const ResultScreen = () => {
     const location = useLocation();
     const navigate = useNavigate();
     
-    // Извлекаем данные, переданные через navigate
     const { isLiar } = location.state || {};
 
-    console.log("Результаты игры:", isLiar); // Результаты игры: undefined
-
     const handleGoHome = () => {
-        navigate('/'); // Переход на main
+        navigate('/');
     };
 
     return (

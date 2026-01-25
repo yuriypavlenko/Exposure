@@ -3,6 +3,7 @@ package com.exposure.services;
 import com.exposure.DTOs.service.BotStates;
 import com.exposure.models.Bot;
 import com.exposure.models.Message;
+import com.exposure.models.Story;
 import org.springframework.stereotype.Service;
 
 import java.util.List;

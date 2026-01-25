@@ -5,6 +5,5 @@ import java.util.List;
 public record StoryResponse(
         StoryMeta story_meta,
         List<TimelineEvent> truth_timeline,
-        List<RolesData> roles_data,
-        List<Clue> clues
+        List<RolesData> roles_data
 ) {}
