@@ -2,22 +2,28 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 export default function MainScreen() {
   const navigate = useNavigate();
   const [bots, setBots] = useState([]);
   const [selectedBotIds, setSelectedBotIds] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [buttonText, setButtonText] = useState("Играть");
+  const [isActive, setIsActive] = useState(false);
+  const [isGameLoading, setIsGameLoading] = useState(false);
 
   const userToken = localStorage.getItem('token');
 
   useEffect(() => {
     const initializePage = async () => {
       try {
-        await axios.get('http://localhost:8080/api/main', {
+        
+        await axios.get(API_URL + '/api/main', {
           headers: { Authorization: userToken }
         });
 
-        const response = await axios.get('http://localhost:8080/api/main/bots', {
+        const response = await axios.get(API_URL + '/api/main/bots', {
           headers: { Authorization: userToken }
         });
         
@@ -37,23 +43,36 @@ export default function MainScreen() {
   const toggleBotSelection = (id) => {
     setSelectedBotIds((prev) => {
       if (prev.includes(id)) {
-        return prev.filter(botId => botId !== id);
+        prev = prev.filter(botId => botId !== id)
       } else if (prev.length < 2) {
-        return [...prev, id];
-      } else {
-        return prev;
+        prev = [...prev, id];
       }
+
+      if (prev.length == 2) {
+        setIsActive(true);
+      } else {
+        setIsActive(false);
+      }
+
+      return prev;
     });
   };
 
   const startGame = async () => {
-    if (selectedBotIds.length !== 2) {
-      alert("Нужно выбрать ровно двух ботов!");
+    if (selectedBotIds.length != 2) {
+      return;
+    }
+
+    if (!isActive) {
       return;
     }
 
     try {
-      const response = await axios.post('http://localhost:8080/api/game/start', {
+      setButtonText("Загрузка...");
+      setIsActive(false);
+      setIsGameLoading(true);
+
+      const response = await axios.post(API_URL + '/api/game/start', {
         userId: userToken,
         selectedBotId: selectedBotIds // Отправляем массив ID
       });
@@ -62,11 +81,13 @@ export default function MainScreen() {
     } catch (error) {
       console.error("Ошибка старта игры", error);
       alert("Не удалось начать игру");
+      setButtonText("Играть");
+      setIsActive(true);
+      setIsGameLoading(false);
     }
   };
 
   if (loading) return <div>Загрузка ботов...</div>;
-
 
   // TODO: Вынести это в CSS файл после.
   return (
@@ -82,14 +103,18 @@ export default function MainScreen() {
               <div 
                 key={bot.id}
                 onClick={() => toggleBotSelection(bot.id)}
+                className={isGameLoading? '.disabled-div' : ''}
                 style={{
                   border: isSelected ? '3px solid #28a745' : '1px solid gray',
-                  padding: '15px',
-                  cursor: 'pointer',
+                  padding: '35px',
+                  marginTop: "20px",
                   borderRadius: '12px',
                   backgroundColor: isSelected ? '#e6ffed' : 'white',
                   transition: '0.2s',
-                  transform: isSelected ? 'scale(1.05)' : 'scale(1)'
+                  transform: isSelected ? 'scale(1.05)' : 'scale(1)',
+                  pointerEvents: isGameLoading? 'none' : '',
+                  opacity: isGameLoading? '0.5' : '1',
+                  cursor: isGameLoading? 'not-allowed' : 'pointer'
                 }}
               >
                 <div style={{ fontSize: '30px' }}>🤖</div>
@@ -102,19 +127,9 @@ export default function MainScreen() {
 
       <button 
         onClick={startGame} 
-        disabled={selectedBotIds.length !== 2}
-        style={{ 
-          padding: '10px 30px', 
-          fontSize: '20px', 
-          marginTop: '20px',
-          backgroundColor: selectedBotIds.length === 2 ? '#007bff' : '#ccc',
-          color: 'white',
-          border: 'none',
-          borderRadius: '5px',
-          cursor: selectedBotIds.length === 2 ? 'pointer' : 'not-allowed'
-        }}
-      >
-        Играть втроем
+        className="btn btn-primary btn-lg" type="button" disabled={!isActive}>
+        <span className={isGameLoading? 'spinner-border spinner-border-sm' : 'spinner-border spinner-border-sm d-none'} role="status" aria-hidden="true"></span>
+        {isGameLoading? '   ': ""}{buttonText}
       </button>
     </div>
   );

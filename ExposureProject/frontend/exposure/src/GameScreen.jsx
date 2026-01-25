@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-
+const API_URL = import.meta.env.VITE_API_URL;
 
 export default function GameScreen() {
   const { state } = useLocation();
@@ -43,7 +43,7 @@ export default function GameScreen() {
     if (!questionText || remainingQuestions <= 0) return;
     
     try {
-      const res = await axios.post('http://localhost:8080/api/game/question', {
+      const res = await axios.post(API_URL + '/api/game/question', {
         userId,
         botId,
         sessionId,
@@ -68,7 +68,7 @@ export default function GameScreen() {
 
   const handleChoice = async (botId) => {
     try {
-        const response = await axios.post('http://localhost:8080/api/game/choice', { userId, botId, sessionId });
+        const response = await axios.post(API_URL + '/api/game/choice', { userId, botId, sessionId });
         
         // Передаем данные о том, был ли бот лжецом, через state
         navigate('/results', { 

@@ -66,14 +66,22 @@ Navigate to the backend directory *backend*. Find `docker-compose.yml` and run `
 
 ### Step 3: Backend (Spring Boot)
 1) Navigate to the backend directory *backend*.
-2) Check configurations in `application.properties`
+2) Check configurations in `application.properties`. \
+If you need custom local configuration, copy `application.properties` file and set new file name to `application-local.properties` and make changes in it.
 3) Build and run the application:\
 For windows: `./mvnw.cmd spring-boot:run`\
 For Linux/MacOS: `./mvnw spring-boot:run`\
+The server will start on http:`http://localhost:8080`\
+\
+If you have custom configuration file build and run the application with local configuration:\
+For windows: `spring-boot:run "-Dspring-boot.run.profiles=local"`\
+For Linux/MacOS: `./mvnw spring-boot:run -Dspring-boot.run.profiles=local`
 The server will start on http:`http://localhost:8080`
 
 ### Step 4: Frontend (React)
 1) Navigate to the frontend directory *frontend*.
+2) Check configurations in `.env`. \
+If you need custom local configuration, copy `.env` file and set new file name to `.env.local` and make changes in it.
 2) Install dependencies: `npm install`
 3) Start the development server: `npm run dev`\
    The UI will be available at `http://localhost:5173`
