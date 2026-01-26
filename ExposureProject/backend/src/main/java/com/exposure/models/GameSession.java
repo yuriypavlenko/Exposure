@@ -60,6 +60,9 @@ public class GameSession {
     @JoinColumn(name = "story_id")
     private Story story;
 
+    @OneToMany(mappedBy = "session", cascade = CascadeType.ALL)
+    private List<SessionBotRole> botRoles = new ArrayList<>();
+
     private int questionsLeft;
 
     private Boolean isActive;

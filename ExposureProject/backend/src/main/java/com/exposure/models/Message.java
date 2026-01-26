@@ -31,4 +31,8 @@ public class Message {
     private String text;
 
     private LocalDateTime sentAt = LocalDateTime.now();
+
+    public boolean isFromUser() {
+        return this.sender instanceof User;
+    }
 }

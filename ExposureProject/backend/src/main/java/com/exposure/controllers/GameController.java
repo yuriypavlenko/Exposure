@@ -1,11 +1,13 @@
 package com.exposure.controllers;
 
 import com.exposure.DTOs.game.*;
+import com.exposure.DTOs.service.AI.StoryResponse;
 import com.exposure.DTOs.service.BotStates;
 import com.exposure.interfaces.BotResponseInterface;
 import com.exposure.models.*;
 import com.exposure.repositories.*;
 import com.exposure.services.MissionService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -33,6 +35,8 @@ public class GameController {
     private final BotResponseInterface botResponseService;
 
     private final Logger logger = LoggerFactory.getLogger(GameController.class);
+
+    private final ObjectMapper objectMapper;
 
 
     /*
@@ -66,8 +70,11 @@ public class GameController {
 
                 Mission mission = missionOpt.get();
                 Story story;
+                StoryResponse storyDto;
                 try {
                     story = missionService.generateStory(mission, bots.size(), lyingBots.size());
+
+                    storyDto = objectMapper.readValue(story.getGeneratedStoryJson(), StoryResponse.class);
                 } catch (Exception e) {
                     logger.error(e.toString());
                     return ResponseEntity.status(500).build();
@@ -77,6 +84,9 @@ public class GameController {
                 int initialLimit = 5; // TODO: Убрать в будущем эту логику в настройки.
 
                 GameSession gameSession = new GameSession(user, bots, lyingBots, initialLimit, mission, story);
+
+                List<SessionBotRole> botRoles = missionService.assignRoles(gameSession, storyDto, bots);
+                gameSession.setBotRoles(botRoles);
 
                 for (Bot bot : bots) {
                     Chat chat = new Chat();
@@ -128,7 +138,7 @@ public class GameController {
         Story story = gameSession.getStory();
 
         BotStates state = gameSession.isBotLying(bot.getId()) ? BotStates.LYING : BotStates.NOT_LYING;
-        String botResponseText = botResponseService.getResponse(bot, request.question, state, chat, story);
+        String botResponseText = botResponseService.getResponse(bot, request.question, chat, story, gameSession);
 
         if (botResponseText != null && botResponseText.length() > 1000) {
             botResponseText = botResponseText.substring(0, 997) + "...";
@@ -141,6 +151,10 @@ public class GameController {
         return ResponseEntity.ok(new QuestionResponse(botResponseText, gameSession.getQuestionsLeft()));
     }
 
+
+    /*
+    TODO: переместить этот метод в CHAT MODEL.
+     */
     private void saveMessage(Chat chat, SessionMember sender, String text) {
         Message message = new Message();
         message.setChat(chat);

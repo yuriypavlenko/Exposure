@@ -2,8 +2,7 @@ package com.exposure.services;
 
 import com.exposure.DTOs.service.AI.RolesData;
 import com.exposure.DTOs.service.AI.StoryResponse;
-import com.exposure.models.Mission;
-import com.exposure.models.Story;
+import com.exposure.models.*;
 import com.exposure.repositories.StoryRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,7 +13,11 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /*
 Нужно изменить генерацию так, чтобы в истории не было конкретного персонажа.
@@ -154,10 +157,27 @@ public class MissionService {
             int lyingRoles
     ) {
 
-        String rolesInfo =
-                "Total roles: " + totalRoles + ". " +
-                        "Roles must be named strictly as role1, role2, ..., role" + totalRoles + ". " +
-                        "Exactly " + lyingRoles + " roles must lie in their alibi.";
+        String roleList = IntStream.rangeClosed(1, totalRoles)
+                .mapToObj(i -> "\"role" + i + "\"")
+                .collect(Collectors.joining(", "));
+
+        String rolesInfo = """
+            ROLE SET (ABSOLUTE):
+            
+            The ONLY existing roles in this scenario are:
+            [%s]
+            
+            This list is FINAL.
+            No additional roles may exist.
+            No role outside this list may appear anywhere in the output.
+            
+            LYING ROLES COUNT (ABSOLUTE):
+            %d
+            
+            Exactly %d roles must have alibi ≠ actual.
+            All other roles must have alibi === actual.
+            """.formatted(roleList, lyingRoles, lyingRoles);
+
 
         return """
             SYSTEM ROLE:
@@ -196,64 +216,68 @@ public class MissionService {
 
     private String storyJsonSchema() {
         return """
-        OUTPUT CONTRACT (STRICT):
-        
-        You must return a SINGLE valid JSON object.
-        Any text outside JSON is FORBIDDEN.
-        
-        STRUCTURE:
-        
-        1. story_meta (object)
-           - description: short neutral description of the incident.
-        
-        2. truth_timeline (array)
-           CRITICAL STRUCTURE.
-           Represents objective reality of what truly happened.
-        
-           Each entry describes a concrete moment in time.
-           Events must be descriptive and neutral.
-           Events MUST NOT reference role identifiers directly inside text.
-        
-           Each item:
+           SYSTEM ROLE:
+           You are a deterministic crime scenario generator. Return ONLY raw JSON.
+
+           MISSION:
+           John, a rich man, was killed at his house party.
+
+           CONSTRAINTS:
+           1. Roles: ONLY "role1", "role2".
+           2. Guilt: Exactly one role isGuilty=true.
+           3. Lying: Exactly one role has alibi != actual. The guilty role MUST be the liar.
+           4. Witnesses: Use ONLY ["role1", "role2"] identifiers.
+
+           JSON STRUCTURE (STRICT):
            {
-             "time": "HH:mm",
-             "event": "Objective description of what occurred.",
-             "location": "Physical place where it happened.",
-             "witnesses": ["role1", "role2"]
+             "story_meta": { "description": "string" },
+             "truth_timeline": [
+               { "time": "HH:mm", "event": "string", "location": "string", "witnesses": ["role1"] }
+             ],
+             "roles_data": [
+               {
+                 "role": "role1",
+                 "role_description": "string",
+                 "isGuilty": boolean,
+                 "motive": "string or null",
+                 "alibi": "string",
+                 "actual": "string"
+               }
+             ]
            }
-        
-           RULES:
-           - Timeline must be chronological.
-           - Events should include movements, sounds, interactions, absences, changes.
-           - Avoid conclusions or interpretations.
-           - Do NOT reveal guilt directly.
-           - The system will later convert this timeline into role-specific perspectives.
-        
-        3. roles_data (array)
-        
+
+           EXAMPLE OF TRUTH_TIMELINE (Follow this format):
+           "truth_timeline": [
+             { "time": "18:00", "event": "Music starts", "location": "Ballroom", "witnesses": ["role1", "role2"] }
+           ]
+
            IMPORTANT:
-           - Number of roles MUST equal total_roles requested by user.
-           - Exactly ONE role must have isGuilty = true.
-           - All others must have isGuilty = false.
-        
-           Each role:
-        
-           {
-             "role": "role1",
-             "role_description": "Occupation or narrative position",
-             "isGuilty": boolean,
-             "motive": "Reason for possible involvement (empty string allowed for innocents)",
-             "alibi": "What the role CLAIMS they were doing at the time",
-             "actual": "What the role was actually doing"
-           }
-        
-        RULES:
-        - role identifiers must be exactly: role1, role2, role3, ...
-        - Do NOT include character names.
-        - Do NOT include solution field.
-        - Do NOT include clues field.
-        - Do NOT include markdown.
-        - All strings must be meaningful and non-null.
-        """;
+           - "truth_timeline" MUST be a JSON ARRAY, not an object.
+           - Include ALL fields from the structure (location, role_description, etc.).
+           - No markdown, no intro, no wrap.
+           """;
+    }
+
+    public List<SessionBotRole> assignRoles(GameSession session, StoryResponse storyData, List<Bot> bots) {
+        List<SessionBotRole> assignments = new ArrayList<>();
+        List<RolesData> rolesJson = storyData.roles_data();
+
+        RolesData guiltyRole = rolesJson.stream()
+                .filter(RolesData::isGuilty)
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("No guilty role in JSON"));
+
+        Bot guiltyBot = session.getLyingBots().get(0);
+
+        assignments.add(new SessionBotRole(null, session, guiltyBot, guiltyRole.role(), true));
+
+        List<Bot> otherBots = bots.stream().filter(b -> !b.getId().equals(guiltyBot.getId())).toList();
+        List<RolesData> otherRoles = rolesJson.stream().filter(r -> !r.isGuilty()).toList();
+
+        for (int i = 0; i < otherBots.size(); i++) {
+            assignments.add(new SessionBotRole(null, session, otherBots.get(i), otherRoles.get(i).role(), false));
+        }
+
+        return assignments;
     }
 }
