@@ -71,11 +71,11 @@ If you need custom local configuration, copy `application.properties` file and s
 3) Build and run the application:\
 For windows: `./mvnw.cmd spring-boot:run`\
 For Linux/MacOS: `./mvnw spring-boot:run`\
-The server will start on http:`http://localhost:8080`\
 \
 If you have custom configuration file build and run the application with local configuration:\
-For windows: `spring-boot:run "-Dspring-boot.run.profiles=local"`\
-For Linux/MacOS: `./mvnw spring-boot:run -Dspring-boot.run.profiles=local`
+For windows: `./mvnw spring-boot:run "-Dspring-boot.run.profiles=local"`\
+For Linux/MacOS: `./mvnw spring-boot:run -Dspring-boot.run.profiles=local`\
+\
 The server will start on http:`http://localhost:8080`
 
 ### Step 4: Frontend (React)
