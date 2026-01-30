@@ -6,7 +6,7 @@ import com.exposure.events.GameSessionCreatedEvent;
 import com.exposure.interfaces.BotResponseInterface;
 import com.exposure.models.*;
 import com.exposure.repositories.*;
-import com.exposure.services.MissionService;
+import com.exposure.services.GameService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -14,9 +14,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.time.LocalDateTime;
 import java.util.*;
+
 
 
 @RequiredArgsConstructor
@@ -28,148 +27,156 @@ public class GameController {
     private final UserRepository userRepository;
     private final GameSessionRepository gameSessionRepository;
     private final MissionRepository missionRepository;
-    private final StoryRepository storyRepository;
 
     private final BotResponseInterface botResponseService;
+    private final GameService gameService;
 
     private final Logger logger = LoggerFactory.getLogger(GameController.class);
 
     private final ApplicationEventPublisher eventPublisher;
 
 
-    /*
-        TODO: нужно сделать защиту против того, что пользователь вызовет старт игры несколько раз и не завершит сессию.
-     */
+
     @Transactional
     @PostMapping("/start")
-    public ResponseEntity<?> getPage(@RequestBody GameRequest request) {
+    public ResponseEntity<?> startGame(@RequestBody GameRequest request) {
+        try {
+            if (request.userId == null || request.selectedBotIds == null) {
+                return ResponseEntity.badRequest().build();
+            }
 
-        if (request.userId == null || request.selectedBotIds == null) {
-            return ResponseEntity.badRequest().build();
-        }
+            User user = userRepository.findById(Long.parseLong(request.userId)).orElseThrow();
 
-        Optional<User> userOpt = userRepository.findById(Long.parseLong(request.userId));
-        List<Long> selectedBotIds = request.selectedBotIds;
-        Long missionId = request.missionId != null ? request.missionId : 1L;
-        Optional<Mission> missionOpt = missionRepository.findById(missionId);
+            // If user already have active sessions.
+            if (!gameSessionRepository.findAllByUserIdAndIsActiveTrue(user.getId()).isEmpty()) {
+                logger.error("User already have active session.");
+                return ResponseEntity.badRequest().build();
+            }
 
+            List<Long> selectedBotIds = request.selectedBotIds;
+            Long missionId = request.missionId != null ? request.missionId : 1L;
+            Mission mission = missionRepository.findById(missionId).orElseThrow();
+            int initialLimit = mission.getInitialQuestionsAmount();
 
-        if (userOpt.isPresent()
-                && selectedBotIds != null
-                && !selectedBotIds.isEmpty()
-                && missionOpt.isPresent()) {
+            // If some parameters are null or not presented.
+            if (selectedBotIds == null || selectedBotIds.isEmpty()) {
+                logger.error("Parameters are null or empty.");
+                return ResponseEntity.badRequest().build();
+            }
 
             List<Bot> bots = botRepository.findAllById(selectedBotIds);
 
-            if (bots.size() == selectedBotIds.size()) {
-                User user = userOpt.get();
-
-                List<Bot> mutableBots = new ArrayList<>(bots);
-                Collections.shuffle(mutableBots);
-                Bot randomLiar = mutableBots.getFirst();
-                List<Bot> lyingBots = List.of(randomLiar);
-
-                Mission mission = missionOpt.get();
-                int initialLimit = mission.getInitialQuestionsAmount();
-
-                GameSession gameSession = new GameSession(user, bots, lyingBots, initialLimit, mission);
-                gameSessionRepository.save(gameSession);
-
-                eventPublisher.publishEvent(new GameSessionCreatedEvent(
-                        gameSession.getId(), bots.size(), lyingBots.size()
-                ));
-
-                for (Bot bot : bots) {
-                    Chat chat = new Chat();
-
-                    chat.getMembers().add(user);
-                    chat.getMembers().add(bot);
-
-                    gameSession.addChat(chat);
-                }
-
-                List<BotDTO> botDTOs = bots.stream()
-                        .map(b -> new BotDTO(b.getId(), b.getName()))
-                        .toList();
-
-                return ResponseEntity.ok(new InitializeGame(gameSession.getId(), botDTOs, initialLimit));
+            // If size of bots not equals size of selected bot ids.
+            if (bots.size() != selectedBotIds.size()) {
+                logger.error("Size of bots are not equal size of selected bot ids");
+                return ResponseEntity.badRequest().build();
             }
-        }
 
-        return ResponseEntity.badRequest().build();
+            GameSession gameSession = gameService.createGameSession(user, bots, mission);
+            gameSessionRepository.save(gameSession);
+
+            // Event for mission service to generate story.
+            eventPublisher.publishEvent(new GameSessionCreatedEvent(
+                    gameSession.getId(), gameSession.getBots().size(), gameSession.getLyingBots().size()
+            ));
+
+            // Creating DTO to return front response.
+            List<BotDTO> botDTOs = bots.stream()
+                    .map(b -> new BotDTO(b.getId(), b.getName()))
+                    .toList();
+
+            return ResponseEntity.ok(new InitializeGame(gameSession.getId(), botDTOs, initialLimit));
+
+        } catch (Exception e) {
+            logger.error("Error while starting game: ", e);
+            return ResponseEntity.badRequest().build();
+        }
     }
 
 
     @PostMapping("/question")
     @Transactional
     public ResponseEntity<?> question(@RequestBody QuestionRequest request) {
-        User user = userRepository.findById(request.userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        Bot bot = botRepository.findById(request.botId)
-                .orElseThrow(() -> new IllegalArgumentException("Bot not found"));
-        GameSession gameSession = gameSessionRepository.findById(request.sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("Session not found"));
+        try {
+            User user = userRepository.findById(request.userId)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+            Bot bot = botRepository.findById(request.botId)
+                    .orElseThrow(() -> new IllegalArgumentException("Bot not found"));
+            GameSession gameSession = gameSessionRepository.findById(request.sessionId)
+                    .orElseThrow(() -> new IllegalArgumentException("Session not found"));
 
-        if (!gameSession.getUser().getId().equals(user.getId())) return ResponseEntity.badRequest().build();
-        if (!gameSession.getBots().contains(bot)) return ResponseEntity.badRequest().build();
-        if (gameSession.getQuestionsLeft() <= 0) return ResponseEntity.status(403).body("No questions left");
+            // Session doesn't contains user
+            if (!gameSession.getUser().getId().equals(user.getId())) {
+                logger.error("Session doesn't contains user.");
+                return ResponseEntity.badRequest().build();
+            }
 
-        Chat chat = gameSession.getChats().stream()
-                .filter(c -> c.getMembers().contains(user) && c.getMembers().contains(bot))
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException("Chat between user and bot not initialized"));
+            // Session doesn't contains bot
+            if (!gameSession.getBots().contains(bot)) {
+                logger.error("Session doesn't contains bot.");
+                return ResponseEntity.badRequest().build();
+            }
 
-        Story story = gameSession.getStory();
+            // No questions left
+            if (gameSession.getQuestionsLeft() <= 0) {
+                logger.warn("No questions left.");
+                return ResponseEntity.status(403).body("No questions left");
+            }
 
-        // BotStates state = gameSession.isBotLying(bot.getId()) ? BotStates.LYING : BotStates.NOT_LYING;
-        String botResponseText = botResponseService.getResponse(bot, request.question, chat, story, gameSession);
+            // Chat between bot and user does not exist.
+            Chat chat = gameSession.getChats().stream()
+                    .filter(c -> c.getMembers().contains(user) && c.getMembers().contains(bot))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalStateException("Chat between user and bot not initialized"));
 
-        if (botResponseText != null && botResponseText.length() > 1000) {
-            botResponseText = botResponseText.substring(0, 997) + "...";
+
+            Story story = gameSession.getStory();
+
+            String botResponseText = botResponseService.getResponse(bot, request.question, chat, story, gameSession);
+
+            // If length of LLM response too big.
+            if (botResponseText != null && botResponseText.length() > 1000) {
+                botResponseText = botResponseText.substring(0, 997) + "...";
+            }
+
+            chat.addMessage(user, request.question);
+            chat.addMessage(bot, botResponseText);
+
+            gameSession.decreaseQuestionLeft();
+
+            return ResponseEntity.ok(new QuestionResponse(botResponseText, gameSession.getQuestionsLeft()));
+        } catch (Exception e) {
+            logger.error("Error while processing question: ", e);
+            return ResponseEntity.badRequest().build();
         }
-
-        saveMessage(chat, user, request.question);
-        saveMessage(chat, bot, botResponseText);
-
-        gameSession.decreaseQuestionLeft();
-        return ResponseEntity.ok(new QuestionResponse(botResponseText, gameSession.getQuestionsLeft()));
-    }
-
-
-    /*
-    TODO: переместить этот метод в CHAT MODEL.
-     */
-    private void saveMessage(Chat chat, SessionMember sender, String text) {
-        Message message = new Message();
-        message.setChat(chat);
-        message.setSender(sender);
-        message.setText(text);
-        message.setSentAt(LocalDateTime.now());
-
-        chat.getMessages().add(message);
     }
 
 
     @PostMapping("/choice")
     public ResponseEntity<?> choice(@RequestBody ChoiceRequest request) {
-        if (request.userId == null || request.botId == null || request.sessionId == null) {
-            return ResponseEntity.badRequest().body("ID cannot be null");
-        }
+        try {
+            if (request.userId == null || request.botId == null || request.sessionId == null) {
+                logger.error("Error while processing choice: ID cannot be null.");
+                return ResponseEntity.badRequest().body("ID cannot be null");
+            }
 
-        User user = userRepository.findById(request.userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        Bot bot = botRepository.findById(request.botId)
-                .orElseThrow(() -> new IllegalArgumentException("Bot not found"));
-        GameSession gameSession = gameSessionRepository.findById(request.sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("Session not found"));
+            User user = userRepository.findById(request.userId)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+            Bot bot = botRepository.findById(request.botId)
+                    .orElseThrow(() -> new IllegalArgumentException("Bot not found"));
+            GameSession gameSession = gameSessionRepository.findById(request.sessionId)
+                    .orElseThrow(() -> new IllegalArgumentException("Session not found"));
 
-        if (!gameSession.getUser().getId().equals(user.getId())) return ResponseEntity.badRequest().build();
-        if (!gameSession.getBots().contains(bot)) return ResponseEntity.badRequest().build();
+            if (!gameSession.getUser().getId().equals(user.getId())) return ResponseEntity.badRequest().build();
+            if (!gameSession.getBots().contains(bot)) return ResponseEntity.badRequest().build();
 
-        if (gameSession.isBotLying(bot.getId())) {
-            return ResponseEntity.ok(new ChoiceResponse(true, bot.getId()));
-        } else {
-            return ResponseEntity.ok(new ChoiceResponse(false, bot.getId()));
+            if (gameSession.isBotLying(bot.getId())) {
+                return ResponseEntity.ok(new ChoiceResponse(true, bot.getId()));
+            } else {
+                return ResponseEntity.ok(new ChoiceResponse(false, bot.getId()));
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 

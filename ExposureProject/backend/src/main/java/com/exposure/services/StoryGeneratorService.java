@@ -51,13 +51,26 @@ public class StoryGeneratorService {
                 List.of(new UserMessage(fullPrompt))
         );
 
+        StringBuilder contentBuilder = new StringBuilder();
         String rawResponse;
 
         try {
-            rawResponse = chatClient
+            Iterable<String> tokens = chatClient
                     .prompt(prompt)
-                    .call()
-                    .content();
+                    .stream()
+                    .content()
+                    .toIterable();
+
+            for (String token : tokens) {
+                if (Thread.currentThread().isInterrupted()) {
+                    logger.info("Ollama generation interrupted by user.");
+                    return null;
+                }
+                contentBuilder.append(token);
+            }
+
+            rawResponse = contentBuilder.toString();
+
         } catch (Exception e) {
 
             logger.error("LLM call failed");

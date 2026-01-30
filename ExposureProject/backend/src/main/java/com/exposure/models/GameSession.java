@@ -16,10 +16,6 @@ import java.util.List;
 
 
 
-/*
-    TODO: Добавить в модель Id миссии.
- */
-
 @Getter
 @Setter
 @Entity
@@ -68,6 +64,9 @@ public class GameSession {
     private int questionsLeft;
 
     private Boolean isActive;
+
+    @Version
+    private Long version;
 
     @Enumerated(EnumType.STRING)
     private GameStatus status = GameStatus.GENERATING;

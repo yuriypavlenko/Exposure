@@ -2,21 +2,29 @@ package com.exposure.services;
 
 import com.exposure.DTOs.service.AI.RolesData;
 import com.exposure.DTOs.service.AI.StoryResponse;
+import com.exposure.events.GameSessionCancelledEvent;
 import com.exposure.events.GameSessionCreatedEvent;
 import com.exposure.models.*;
 import com.exposure.repositories.GameSessionRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.StaleObjectStateException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.context.event.EventListener;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+
+
 
 @Service
 @RequiredArgsConstructor
@@ -26,10 +34,34 @@ public class MissionService {
 
     private final Logger logger = LoggerFactory.getLogger(MissionService.class);
 
+    private final Map<Long, CompletableFuture<?>> runningTasks = new ConcurrentHashMap<>();
+    private final ObjectProvider<MissionService> selfProvider;
+
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Transactional
     public void handleGameStarted(GameSessionCreatedEvent event) {
+        CompletableFuture<Void> task = CompletableFuture.runAsync(() -> {
+            selfProvider.getIfAvailable().processStoryGeneration(event);
+        });
+
+        runningTasks.put(event.sessionId(), task);
+
+        task.whenComplete((res, ex) -> runningTasks.remove(event.sessionId()));
+    }
+
+    @EventListener
+    public void handleCancel(GameSessionCancelledEvent event) {
+        CompletableFuture<?> task = runningTasks.remove(event.sessionId());
+        if (task != null) {
+            task.cancel(true);
+            logger.info("Generation canceled for session {}.", event.sessionId());
+        }
+    }
+
+    @Transactional
+    public void processStoryGeneration(GameSessionCreatedEvent event) {
+        if (Thread.currentThread().isInterrupted()) return;
+
         GameSession session = gameSessionRepository.findById(event.sessionId())
                 .orElseThrow(() -> new RuntimeException("Session not found after commit!"));
 
@@ -37,6 +69,8 @@ public class MissionService {
             Map<String, Object> response = storyGeneratorService.generateStory(
                     session.getMission(), event.botsCount(), event.lyingBotsCount()
             );
+
+            if (Thread.currentThread().isInterrupted()) return;
 
             Story story = (Story) response.get("story");
             StoryResponse storyResponse = (StoryResponse) response.get("storyResponse");
@@ -47,10 +81,15 @@ public class MissionService {
             session.setStatus(GameStatus.READY);
             session.setStory(story);
 
+            gameSessionRepository.save(session);
+
+        } catch (ObjectOptimisticLockingFailureException | StaleObjectStateException e) {
+            logger.info("Session {} was updated (probably closed). Generation canceled automatically.", event.sessionId());
         } catch (Exception e) {
+            logger.error("Error generation story: ", e);
             session.setStatus(GameStatus.FAILED);
+            gameSessionRepository.save(session);
         }
-        gameSessionRepository.save(session);
     }
 
     public List<SessionBotRole> assignRoles(GameSession session, StoryResponse storyData, List<Bot> bots) {

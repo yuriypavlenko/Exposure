@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -36,5 +38,15 @@ public class Chat {
 
     public boolean hasMember(SessionMember member) {
         return members.contains(member);
+    }
+
+    public void addMessage(SessionMember sender, String text) {
+        Message message = new Message();
+        message.setChat(this);
+        message.setSender(sender);
+        message.setText(text);
+        message.setSentAt(LocalDateTime.now());
+
+        this.messages.add(message);
     }
 }
