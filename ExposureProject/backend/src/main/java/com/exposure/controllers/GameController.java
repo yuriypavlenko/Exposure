@@ -180,6 +180,7 @@ public class GameController {
         }
     }
 
+
     @GetMapping("/mission/{sessionId}")
     public ResponseEntity<?> missions(@PathVariable("sessionId") String sessionIdStr) {
         try {

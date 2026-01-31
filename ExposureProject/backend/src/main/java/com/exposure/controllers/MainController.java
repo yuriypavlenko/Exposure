@@ -16,7 +16,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.ResponseEntity;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -52,7 +51,7 @@ public class MainController {
                 eventPublisher.publishEvent(new GameSessionCancelledEvent(session.getId()));
             }
 
-            gameSessionRepository.saveAll(activeSessions);
+            gameSessionRepository.saveAllAndFlush(activeSessions);
 
             return ResponseEntity.ok().build();
         } catch (ObjectOptimisticLockingFailureException e) {

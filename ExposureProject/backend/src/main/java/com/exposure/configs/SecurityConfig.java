@@ -30,7 +30,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/register", "/api/login", "/api/main", "/api/main/bots", "/api/main/missions",
                                 "/api/game/start", "/api/game/question", "/api/game/choice", "/api/game/status/{sessionId}",
-                                "/api/game/mission/{sessionId}").permitAll()
+                                "/api/game/mission/{sessionId}",
+                                "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/swagger-resources/**", "/webjars/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 // Если используете JWT/Token, убедитесь, что сессии STATELESS

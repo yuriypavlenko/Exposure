@@ -7,7 +7,6 @@ import ResultScreen from './ResultScreen';
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
-  const userToken = localStorage.getItem('token');
 
   return (
     <Router>
