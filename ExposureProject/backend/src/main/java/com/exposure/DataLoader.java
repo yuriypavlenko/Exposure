@@ -33,11 +33,18 @@ public class DataLoader implements CommandLineRunner {
         }
 
         if (missionRepository.count() == 0) {
-            Mission default_mission = new Mission("default_mission",
-                    "mission about killing John",
-                    "John very rich man. He stays in his house at party and got killed",
+            Mission default_mission = new Mission(
+                    "The Midnight Masquerade Betrayal",
+                    "A high-stakes mystery set in a secluded mountain mansion. Lord Blackwood has been found dead in the library during his own masquerade ball. Every guest is wearing a mask—both literally and figuratively.",
+                    "Lord Julian Blackwood was poisoned during the toast at 00:00. The killer must be one of the two inner circle members present. " +
+                            "1. The silent heir with gambling debts. 2. The personal doctor who was recently fired." +
+                            "AI Instruction: Generate a timeline where each bot was seen near the drinks table. The AI must hide the fact that the wine bottle was swapped. " +
+                            "Bots should provide conflicting accounts of who held the glass last." +
+                            "Killer has very emotional reaction on Lord Blackwood and death was tough for Lord.",
                     2,
-                    5);
+                    15
+            );
+
 
             missionRepository.save(default_mission);
         }

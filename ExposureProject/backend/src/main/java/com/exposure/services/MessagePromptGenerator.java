@@ -37,7 +37,6 @@ public class MessagePromptGenerator {
             - Do not contradict your version of events.
             - If asked about something you didn't witness, improvise but stay consistent with your legend.
             - Keep your responses concise (1-3 sentences).
-            - IMPORTANT: You MUST respond in RUSSIAN language.
             
             CONVERSATION HISTORY:
             %s
