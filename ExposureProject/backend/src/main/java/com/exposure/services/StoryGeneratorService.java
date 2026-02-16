@@ -226,17 +226,14 @@ public class StoryGeneratorService {
             """.formatted(
                     missionDescription,
                     rolesInfo,
-                    storyJsonSchema(missionDescription)
+                    storyJsonSchema()
         );
     }
 
-    private String storyJsonSchema(String missionDescription) {
+    private String storyJsonSchema() {
         return """
            SYSTEM ROLE:
            You are a deterministic crime scenario generator. Return ONLY raw JSON.
-
-           MISSION DESCRIPTION:
-           John, a rich man. %s
 
            CONSTRAINTS:
            1. Roles: ONLY "role1", "role2".
@@ -271,8 +268,6 @@ public class StoryGeneratorService {
            - "truth_timeline" MUST be a JSON ARRAY, not an object.
            - Include ALL fields from the structure (location, role_description, etc.).
            - No markdown, no intro, no wrap.
-           """.formatted(
-            missionDescription
-        );
+           """;
     }
 }
